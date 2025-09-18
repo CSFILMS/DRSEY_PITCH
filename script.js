@@ -11,7 +11,7 @@ const CONFIG = {
 
 // Debug: Log that script is loaded
 console.log('🚀 SCRIPT.JS LOADED - VERSION 4 - FORCE REDIRECT');
-console.log('🎯 Will redirect to DRSEY_PITCHTEXT.html');
+console.log('🎯 Will redirect to DRSEY_PITCHTEXT_NEW.html');
 
 // State management
 const state = {
@@ -151,11 +151,11 @@ function handlePasswordEntry(attempt) {
 
     runSequence(accessGrantedSequence, elements.msg, CONFIG.accessSequenceDelay, () => {
       setTimeout(() => {
-        console.log('🎯 FORCE REDIRECTING TO test-redirect.html...');
+        console.log('🎯 FORCE REDIRECTING TO DRSEY_PITCHTEXT_NEW.html...');
         // Force redirect with multiple methods
-        window.location.href = 'test-redirect.html';
-        window.location.replace('test-redirect.html');
-        document.location = 'test-redirect.html';
+        window.location.href = 'DRSEY_PITCHTEXT_NEW.html';
+        window.location.replace('DRSEY_PITCHTEXT_NEW.html');
+        document.location = 'DRSEY_PITCHTEXT_NEW.html';
       }, CONFIG.redirectDelay);
     });
   } else {
