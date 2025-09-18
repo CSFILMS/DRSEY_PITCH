@@ -10,8 +10,9 @@ const CONFIG = {
 };
 
 // Debug: Log that script is loaded
-console.log('🚀 SCRIPT.JS LOADED - VERSION 4 - FORCE REDIRECT');
+console.log('🚀 SCRIPT.JS LOADED - VERSION 6 - FORCE REDIRECT TO NEW');
 console.log('🎯 Will redirect to DRSEY_PITCHTEXT_NEW.html');
+console.log('🔧 Cache busting enabled - v6');
 
 // State management
 const state = {
