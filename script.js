@@ -153,10 +153,16 @@ function handlePasswordEntry(attempt) {
     runSequence(accessGrantedSequence, elements.msg, CONFIG.accessSequenceDelay, () => {
       setTimeout(() => {
         console.log('🎯 FORCE REDIRECTING TO DRSEY_PITCHTEXT_NEW.html...');
+        console.log('🔧 Current URL:', window.location.href);
+        console.log('🔧 Target URL: DRSEY_PITCHTEXT_NEW.html');
         // Force redirect with multiple methods
         window.location.href = 'DRSEY_PITCHTEXT_NEW.html';
         window.location.replace('DRSEY_PITCHTEXT_NEW.html');
         document.location = 'DRSEY_PITCHTEXT_NEW.html';
+        // Additional fallback
+        setTimeout(() => {
+          window.location = 'DRSEY_PITCHTEXT_NEW.html';
+        }, 100);
       }, CONFIG.redirectDelay);
     });
   } else {
