@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Unscramble + Images</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* Background video */
+    .bg-video {
+      position: fixed;
+      top: calc(2vh + 5vw - 1rem);
+      left: calc(50% + 1vw);
+      transform: translateX(-50%) perspective(1000px) rotateX(5deg) rotateY(-35deg);
+      width: calc(45vw - 4rem);
+      height: calc(55vh - 4rem);
+      object-fit: cover;
+      object-position: top center;
+      z-index: -1;
+      pointer-events: none;
+      display: none;
+      filter: grayscale(1) brightness(0.64) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2);
+    }
+    /* Video overlay (disabled for small centered video) */
+    .bg-overlay {
+      display: none;
+    }
+    /* Your actual content goes above (z-index > 0) */
+    .content {
+      position: relative;
+      z-index: 1;
+      color: #e8e8e8;
+      font: 16px/1.5 system-ui, sans-serif;
+      padding: 6vmin;
+    }
+    html,body { height:100%; margin:0; background:#000; }
+
+    /* Font Definitions */
+    @font-face {
+      font-family: 'IBM3270';
+      src: url('fonts/3270-Regular.woff2') format('woff2'),
+           url('fonts/3270-Regular.ttf') format('truetype'),
+           url('fonts/3270-Regular.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    @font-face {
+      font-family: 'PixelCarnageMono';
+      src: url('fonts/PixelCarnageMono.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    @font-face {
+      font-family: 'Crisp';
+      src: url('fonts/Crisp.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    @font-face {
+      font-family: 'ProggyCleanCE';
+      src: url('fonts/ProggyCleanCE.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    @font-face {
+      font-family: 'ProggySquare';
+      src: url('fonts/ProggySquare.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    :root { 
+      --fg:#D4D4D4; 
+      --bg:#000; 
+      --accent:#00FF00; 
+      --soft:#66FF66;
+      --font-family: monospace;
+    }
+    html, body { height:100%; }
+    
+    /* FORCE NO SCROLLING */
+    html {
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+    
+    body {
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background:var(--bg); 
+      color:var(--fg); 
+      font-family:var(--font-family);
+      padding:5vw; 
+      padding-left: 25vw;
+      max-width:80vw; 
+      margin: 2vh auto; 
+      line-height:1.6; 
+      user-select:none;
+      font-size: 1rem;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    
+    /* CRT scanline effect */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: repeating-linear-gradient(
+0deg,
+transparent 0px,
+transparent 2px,
+rgba(0, 255, 0, 0.03) 2px,
+rgba(0, 255, 0, 0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 99998;
+    }
+    
+    /* Black scanlines on top */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: repeating-linear-gradient(
+0deg,
+rgba(0, 0, 0, 0.26) 0px,
+rgba(0, 0, 0, 0.26) 2px,
+transparent 2px,
+transparent 4px
+      );
+      pointer-events: none;
+      z-index: 99999;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+padding: 4vw;
+margin: 3vh auto;
+font-size: 0.8rem;
+      }
+      #page {
+padding: 2vw;
+      }
+            #unscramble {
+        font-size: 0.8rem;
+        line-height: 1.3;
+      }
+      #nav {
+font-size: 0.9rem;
+margin: 2vh 0 1vh;
+      }
+      #nav-msg {
+font-size: 0.6rem;
+      }
+      #hud {
+font-size: 0.6rem;
+flex-direction: column;
+gap: 0.5rem;
+      }
+      #page-counter {
+bottom: 1vh;
+right: 2vw;
+      }
+      #prompt {
+        font-size: 0.7rem;
+      }
+      
+      /* Mobile video sizing */
+      .bg-video {
+        top: calc(1vh + 2vw);
+        left: calc(50% + 0.5vw);
+        width: calc(75vw - 2rem);
+        height: calc(40vh - 2rem);
+        transform: translateX(-50%) perspective(800px) rotateX(3deg) rotateY(-30deg);
+      }
+    }
+    
+    @media screen and (min-resolution: 1dppx) {
+            body {
+        font-size: 1.0rem;
+      }
+    }
+    #page {
+      position:relative; 
+      height: 60vh;
+      min-height: 20em; 
+      padding:2rem; 
+      border-radius:10px;
+      background-size:cover; 
+      background-position:center; 
+      background-repeat:no-repeat;
+      overflow: visible; /* Allow text to be visible */
+    }
+    
+ /* Simple image display */
+     #page img {
+       display: none;
+       filter: grayscale(1) brightness(0.64) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2);
+       /* Grayscale + green tint: black stays black, white becomes green */
+       /* Ensure all image formats including GIFs display properly */
+       image-rendering: auto;
+     }
+     
+   /* Special rule: dim only photo7 - REMOVED (was too dark) */
+      
+      /* Special rule: dim only photo23 */
+      #page img[id="img-23"] {
+filter: grayscale(1) brightness(0.32) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2);
+      }
+      
+      /* Special rule: make page 10 images darker */
+      #page img[id^="img-10"] {
+filter: grayscale(1) brightness(0.35) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2);
+      }
+    
+    #page img.show-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+      display: block;
+    }
+    
+ #page img.show-below {
+       display: block;
+       margin-top: 1rem;
+       max-height: 40%;
+       max-width: 100%;
+       object-fit: contain;
+       position: relative;
+       top: -12rem;
+       z-index: -1;
+     }
+    
+     #page img.show-side {
+display: block;
+position: absolute;
+right: 0;
+top: 0;
+width: 50%;
+height: 100%;
+object-fit: cover;
+z-index: 1;
+      }
+      
+     #page img.show-small-side {
+ display: block;
+ position: absolute;
+ right: 0;
+ top: 0;
+ width: 25%;
+ height: 60%;
+ object-fit: cover;
+ z-index: 1;
+       }
+    
+    /* Text container width is now controlled by JavaScript */
+    
+    /* Hide the default cursor */
+    body {
+      cursor: none;
+    }
+    
+    /* Custom cursor element */
+    #custom-cursor {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      mix-blend-mode: difference;
+      display: none;
+    }
+    
+ #text-wrap { 
+       min-width:0; 
+       margin-top: -1.4rem; 
+       width: 100%;
+       height: calc(100% - 2rem); /* Ensure text doesn't overlap with navbar */
+       box-sizing: border-box;
+       overflow: hidden;
+     }
+                    #unscramble { 
+      white-space: pre-wrap; 
+      font-size: 0.99rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      height: 100%;
+      overflow: hidden;
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
+      /* Preserve original formatting - no text wrapping modifications */
+      text-indent: 0;
+      word-break: normal;
+      hyphens: none;
+    }
+     
+     /* Handle indented line wrapping - preserve indentation for continuation lines */
+     #unscramble .indented-line {
+       display: block;
+       text-indent: 2em; /* Standard indentation */
+     }
+     
+     #unscramble .continuation {
+       display: block;
+       text-indent: 2em; /* Same indentation as parent */
+     }
+    #prompt { 
+      margin-top:1rem; 
+      visibility:hidden; 
+      white-space:pre-wrap; 
+      line-height:1.3; 
+      font-size: 0.9rem;
+    }
+
+    #nav { 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 3vh 0 1vh; 
+      font-size: 0.9rem;
+      min-height: 5vh;
+      position: relative;
+      gap: 4vw;
+    }
+    #nav span { cursor:pointer; user-select:none; padding:0 1em; }
+          #nav-msg { 
+      flex-grow:1; 
+      text-align:center; 
+      font-size:0.6rem;
+      min-height: 1.5rem;
+      visibility: hidden;
+    }
+    #hud { 
+      margin-top:1vh; 
+      font-size:0.8rem;
+      display:flex; 
+      align-items:center; 
+      gap:1rem; 
+      opacity:.9; 
+    }
+    #hud .badge { 
+      display:inline-block; 
+      border:1px solid var(--accent); 
+      padding:.2rem .5rem; 
+      border-radius:999px; 
+      font-weight:bold; 
+      letter-spacing:.03em; 
+      color: var(--accent);
+      text-shadow: 0 0 2px var(--accent), 0 0 12px var(--accent);
+    }
+    #hud .controls { 
+      display: none;
+    }
+    
+    #page-counter {
+      position: fixed;
+      top: calc(2vh + 5vw + 2rem + 60vh + 2rem);
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.0rem;
+      opacity: 0.6;
+      color: var(--accent);
+      text-shadow: 0 0 2px var(--accent), 0 0 8px var(--accent);
+      font-family: var(--font-family);
+      pointer-events: none;
+      z-index: 1000;
+      text-transform: uppercase;
+    }
+    
+   /* Side mode: text on left, image on right */
+      #text-wrap.side-mode {
+width: 50% !important;
+max-width: 50% !important;
+position: relative !important;
+z-index: 2 !important;
+      }
+      
+     /* Small side mode: text on left, smaller image on right */
+       #text-wrap.small-side-mode {
+ width: 75% !important;
+ max-width: 75% !important;
+ position: relative !important;
+ z-index: 2 !important;
+       }
+    
+  #text-wrap.side-mode #unscramble {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow: hidden !important;
+      white-space: pre-wrap !important;
+      word-wrap: normal !important;
+      overflow-wrap: normal !important;
+      hyphens: none !important;
+      text-indent: 0 !important;
+    }
+    
+    #text-wrap.small-side-mode #unscramble {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow: hidden !important;
+      white-space: pre-wrap !important;
+      word-wrap: normal !important;
+      overflow-wrap: normal !important;
+      hyphens: none !important;
+      text-indent: 0 !important;
+      font-size: 1.0rem !important;
+      line-height: 1.3 !important;
+    }
+    
+    /* Collateral Murder video slide animation */
+    #unscramble.collateral-murder-slide {
+      animation: moveUpwards 3s ease-out forwards;
+      position: relative;
+      z-index: 10;
+    }
+    
+    @keyframes moveUpwards {
+      0% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(-50vh);
+      }
+    }
+    
+    /* Persistent text that stays on screen */
+    #persistent-text {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 2rem;
+    }
+    
+    #persistent-text .text-content {
+      color: var(--accent);
+      font-family: var(--font-family);
+      font-size: 2rem;
+      text-align: center;
+      font-weight: bold;
+      text-shadow: 0 0 10px var(--accent);
+    }
+     
+
+  </style>
+</head>
+<body>
+  <!-- Background video for last page -->
+  <video
+    id="bg-video"
+    class="bg-video"
+    autoplay
+    muted
+    playsinline
+    loop
+    preload="metadata"
+    poster="./assets/bg-poster.jpg"
+    aria-hidden="true"
+    tabindex="-1"
+    disablepictureinpicture
+    controlslist="nodownload noplaybackrate noptimizequality nodatachannel"
+    volume="0"
+    defaultMuted
+  >
+    <source src="VIDEOS/video15.mp4" type="video/mp4" />
+    <source src="VIDEOS/video15.webm" type="video/webm" />
+  </video>
+
+  <video
+    id="bg-video2"
+    class="bg-video"
+    autoplay
+    muted
+    playsinline
+    loop
+    preload="metadata"
+    poster="./assets/bg-poster.jpg"
+    aria-hidden="true"
+    tabindex="-1"
+    disablepictureinpicture
+    controlslist="nodownload noplaybackrate noptimizequality nodatachannel"
+    volume="0"
+    defaultMuted
+    style="display: none;"
+  >
+    <source src="VIDEOS/video2.mp4" type="video/mp4" />
+  </video>
+
+  <div class="bg-overlay" id="bg-overlay" style="display: none;"></div>
+
+  <div id="page">
+    <div id="text-wrap">
+      <div id="unscramble"></div>
+      <div id="prompt"></div>
+    </div>
+    
+    <!-- Images will be added here dynamically -->
+  </div>
+
+  <div id="nav">
+    <span id="nav-prev">&lt;</span>
+    <span id="nav-msg"></span>
+    <span id="nav-next">&gt;</span>
+  </div>
+
+  <div id="hud">
+ <span class="controls">[1/2/3] color • [↑/↓] image mode • [L] below • [S] side • [A] small side • [O] off • [Z/X/C] overlay • [M] sound • [T] test typing</span>
+  </div>
+
+  <div id="page-counter">Page <span id="current-page">1</span></div>
+  
+  <!-- Custom cursor -->
+  <div id="custom-cursor"></div>
+
+  <script>
+    /* ================== CONTENT ================== */
+    const fullTextRaw = `
+RECIPIENT: DORSEY.6BDM180925  
+EYES ONLY / NO FWD /  
+NO DSTRO  
+
+SOURCE: CSF  
+FILE ID: 369-108-11  
+
+
+
+
+
+THE SIX BILLION DOLLAR  
+MAN  
+
+PRESS [F] FOR FULL SCREEN  
+
+PRESS SPACEBAR TO CONTINUE  
+
+
+
+
+
+IN AN AGE OF UNIVERSAL DECEIT,  
+TELLING THE TRUTH IS A  
+REVOLUTIONARY ACT.  
+
+
+6BDM: JULIAN ASSANGE AND THE PRICE OF TRUTH  
+
+PRESS SPACEBAR  
+TO CONTINUE  
+
+
+
+
+
+A FILM BY EUGENE JARECKI  
+
+6BDM FEATURES UNPRECEDENTED ACCESS AND PREVIOUSLY UNSEEN MATERIAL. IT TELLS, FOR THE FIRST TIME, WHAT REALLY HAPPENED.  
+
+
+
+
+
+
+BEFORE TODAY’S REALITY OF STATE SECRECY, UNIVERSAL SURVEILLANCE,  AND FAILED LEGACY MEDIA, WIKILEAKS BUILT A SECURE PUBLISHING PLATFORM TO ENABLE WHISTLEBLOWERS TO REACH THE PUBLIC DIRECTLY.  
+
+
+
+
+
+IN 2010, WL RELEASED A CLASSIFIED INTERNAL U.S. MILITARY VIDEO, EXPOSING U.S. WAR CRIMES COMMITTED IN IRAQ.  
+
+
+THIS WAS FOLLOWED BY 6 OF THE 10 LARGEST RELEASES OF SENSITIVE AND CLASSIFIED DOCUMENTS IN U.S. HISTORY.  
+
+
+
+
+
+FROM THE UK TO SWEDEN, SPAIN, ICELAND, AUSTRALIA, ECUADOR, AND BEYOND, US AUTHORITIES CAME AFTER HIM.  
+
+PENTAGON TASK FORCE  
+INTERPOL MANHUNT  
+BANKING BLOCKADE {MASTERCARD/VISA/PAYPAL}  
+INTERNAL MOLE(S)  
+
+
+
+
+
+
+
+REFERENCE THE LINK BETWEEN ASSANGE AND CRYPTO AND OTHER CYPHER VICTORIES  
+
+Noel: With pressure from the (insert powerful people word here)…… Visa, Mastercard, Paypal killed those financial channels. Crippling the cause?  
+
+Noel: Gatekeepers…. Funded not by banks or …. but by millions of ordinary people who simply wanted unfiltered? uncurated? …. WL democratised to news?  
+(idea is to appeal to their crypto philosophy about banking)  
+
+Noel:The people fought back….. Anonymous paper planes section…Hackers tried to take down banking. Visa etc… But it wasn’t enough…. Make ourselves helpless and in need of rescuing. They need to feel needed. This is their particular area of expertise. The monetisation of money. Or the demonitisation of it rather.  
+
+
+
+
+
+After being detained as a political refugee in the Ecuadorian Embassy and later as inmate #XYZ at London’s Maximum Security Belmarsh Prison, 17 of the 18 counts against Assange were dropped in 2024, and he was returned to his native Australia a free man.  
+
+
+
+
+
+
+Sample text  
+
+
+
+
+
+WE NEED YOUR HELP - STATEMENT OF ASK  
+
+
+
+
+
+ALTS  
+
+OR  
+
+EYES ONLYNOT FOR DISTRIBUTION  
+DORSEY/6BDM/180925/EXP 250925  
+
+OR  
+
+PEOPLE THINK THEY KNOW THIS STORY…  
+
+`;
+
+    /* ================== AUDIO SYSTEM ================== */
+    let audioContext = null;
+    let audioEnabled = true;
+    let debugMode = true;
+    let currentAudio = null; // Track currently playing audio
+    let audioVolume = 0.7; // Default volume level
+    
+    // Function to stop any currently playing audio
+    function stopCurrentAudio() {
+      if (currentAudio) {
+        console.log('🛑 Stopping current audio...');
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio.src = ''; // Clear the source
+        currentAudio.load(); // Reset the audio element
+        currentAudio = null;
+      }
+      
+      // Stop any visualizers (disabled)
+      stop3DVisualizer();
+      
+      // Also stop any other audio elements that might be playing
+      const allAudioElements = document.querySelectorAll('audio');
+      allAudioElements.forEach(audio => {
+        if (!audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    }
+    
+    
+    
+    
+    
+    // Visualizer variables (disabled)
+    let visualizerScene = null;
+    let visualizerCamera = null;
+    let visualizerRenderer = null;
+    let visualizerMesh = null;
+    let visualizerUniforms = null;
+    let visualizerAnalyser = null;
+    let visualizerDataArray = null;
+    let visualizerRunning = false;
+    let visualizerComposer = null;
+
+    // Visualizer functions (disabled)
+    function init3DVisualizer() {
+      // Disabled
+    }
+
+    function start3DVisualizer(audioElement) {
+      // Disabled
+    }
+
+    function stop3DVisualizer() {
+      // Disabled
+    }
+
+    function animate3DVisualizer() {
+      // Disabled
+    }
+
+    // Mouse tracking for camera movement
+    let mouseX = 0;
+    let mouseY = 0;
+    document.addEventListener('mousemove', function (e) {
+      const windowHalfX = window.innerWidth / 2;
+      const windowHalfY = window.innerHeight / 2;
+      mouseX = (e.clientX - windowHalfX) / 100;
+      mouseY = (e.clientY - windowHalfY) / 100;
+      window.mouseX = mouseX;
+      window.mouseY = mouseY;
+    });
+
+    // Test audio function
+    function testAudio() {
+      console.log('🧪 Testing audio playback...');
+      const testAudio = new Audio('AUDIO/audio15.mp3');
+      testAudio.volume = 0.7;
+      
+      testAudio.addEventListener('play', () => {
+        console.log('✅ Test audio started playing!');
+      });
+      
+      testAudio.addEventListener('error', (e) => {
+        console.error('❌ Test audio error:', e);
+      });
+      
+      testAudio.play().then(() => {
+        console.log('✅ Test audio playing successfully');
+      }).catch(err => {
+        console.log('❌ Test audio play failed:', err.message);
+        console.log('🔧 Error details:', err);
+      });
+    }
+
+    // Video background functions
+    function showVideoBackground() {
+      console.log('🎬 Showing video15...');
+      const video = document.getElementById('bg-video');
+      
+      if (video) {
+        console.log('✅ Video element found, showing...');
+        video.style.display = 'block';
+        
+        // Ensure video is completely muted
+        video.muted = true;
+        video.volume = 0;
+        video.defaultMuted = true;
+        
+        // Reset video to beginning for sync
+        video.currentTime = 0;
+        
+        video.play().then(() => {
+          console.log('✅ Video15 playing from start (muted)');
+        }).catch(err => {
+          console.log('❌ Video15 play failed:', err.message);
+        });
+      } else {
+        console.error('❌ Video element not found!');
+      }
+    }
+
+    function hideVideoBackground() {
+      console.log('🛑 Hiding video...');
+      const video = document.getElementById('bg-video');
+      
+      if (video) {
+        video.pause();
+        video.style.display = 'none';
+      }
+    }
+
+    // Video2 background functions
+    function showVideo2Background() {
+      console.log('🎬 Showing video2...');
+      const video = document.getElementById('bg-video2');
+      
+      if (video) {
+        console.log('✅ Video2 element found, showing...');
+        video.style.display = 'block';
+        
+        // Ensure video is completely muted
+        video.muted = true;
+        video.volume = 0;
+        video.defaultMuted = true;
+        
+        // Reset video to beginning for sync
+        video.currentTime = 0;
+        
+        video.play().then(() => {
+          console.log('✅ Video2 playing from start (muted)');
+        }).catch(err => {
+          console.log('❌ Video2 play failed:', err.message);
+        });
+      } else {
+        console.error('❌ Video2 element not found!');
+      }
+    }
+
+    function hideVideo2Background() {
+      console.log('🛑 Hiding video2...');
+      const video = document.getElementById('bg-video2');
+      
+      if (video) {
+        video.pause();
+        video.style.display = 'none';
+      }
+    }
+    
+    // Enhanced audio context initialization with debugging
+    function initAudioContext() {
+      if (debugMode) console.log('🔊 Initializing audio context...');
+      
+      if (!audioContext) {
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          console.log('✅ Audio context created successfully:', audioContext.state);
+          
+          // Resume audio context if suspended (required by Chrome)
+          if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+              console.log('✅ Audio context resumed from suspended state');
+            }).catch(err => {
+              console.error('❌ Failed to resume audio context:', err);
+            });
+          }
+        } catch (e) {
+          console.error('❌ Audio context creation failed:', e);
+          audioEnabled = false;
+          showAudioError('Audio not supported in this browser');
+        }
+      }
+      return audioContext !== null;
+    }
+    
+    // Show audio error in the UI
+    function showAudioError(message) {
+      const navMsg = document.getElementById('nav-msg');
+      if (navMsg) {
+        const originalText = navMsg.textContent;
+        const originalVisibility = navMsg.style.visibility;
+        
+        navMsg.textContent = `AUDIO ERROR: ${message}`;
+        navMsg.style.visibility = 'visible';
+        navMsg.style.color = '#FF6666';
+        
+        setTimeout(() => {
+          navMsg.textContent = originalText;
+          navMsg.style.visibility = originalVisibility;
+          navMsg.style.color = '';
+        }, 3000);
+      }
+    }
+    
+    // Simple typing audio function
+    function playTypingAudio() {
+      if (!audioEnabled) {
+        if (debugMode) console.log('🔇 Audio disabled, skipping typing audio');
+        return;
+      }
+      
+      const audio = new Audio();
+      audio.src = 'AUDIO/typingaudio.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        audio.play().then(() => {
+          console.log('✅ Typing audio playing');
+        }).catch(err => {
+          console.error('❌ Typing audio play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Typing audio load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Test typing audio
+    function testTypingAudio() {
+      console.log('🧪 Testing typing audio...');
+      playTypingAudio();
+    }
+    
+    
+
+    // Toggle audio with enhanced feedback
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      console.log(`🔊 Audio ${audioEnabled ? 'ENABLED' : 'DISABLED'}`);
+      
+      const navMsg = document.getElementById('nav-msg');
+      if (navMsg) {
+        const originalText = navMsg.textContent;
+        const originalVisibility = navMsg.style.visibility;
+        
+        navMsg.textContent = audioEnabled ? 'SOUND ON' : 'SOUND OFF';
+        navMsg.style.visibility = 'visible';
+        navMsg.style.color = audioEnabled ? '#00FF00' : '#FF6666';
+        
+        // Play confirmation typing audio if enabling
+        if (audioEnabled) {
+          setTimeout(() => {
+            testTypingAudio();
+          }, 200);
+        }
+        
+        // Restore UI
+        setTimeout(() => {
+          navMsg.textContent = originalText;
+          navMsg.style.visibility = originalVisibility;
+          navMsg.style.color = '';
+        }, 2000);
+      }
+    }
+
+    // Enhanced audio function for page 8
+    function playAudioForPage8() {
+      console.log('🎵 Attempting to play audio for page 8...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio with better error handling
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio7.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      console.log('🎵 Audio source:', audio.src);
+      console.log('🎵 Audio volume:', audioVolume);
+      console.log('🎵 Audio enabled:', audioEnabled);
+      
+      // Multiple event listeners for better compatibility
+      audio.addEventListener('loadstart', () => {
+        console.log('🔄 Audio loading started');
+      });
+      
+      audio.addEventListener('loadeddata', () => {
+        console.log('📊 Audio data loaded');
+      });
+      
+      audio.addEventListener('canplay', () => {
+        console.log('▶️ Audio can play');
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio playing for page 8');
+        }).catch(err => {
+          console.error('❌ Audio play failed:', err);
+          console.error('❌ Error details:', err.message);
+          showAudioError('Audio play failed: ' + err.message);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio load failed:', e);
+        console.error('❌ Audio src was:', audio.src);
+        console.error('❌ Error code:', audio.error ? audio.error.code : 'unknown');
+        showAudioError('Audio file not found or corrupted');
+      });
+      
+      // Force load
+      audio.load();
+    }
+
+    // Enhanced audio function for page 12
+    function playAudioForPage12() {
+      console.log('🎵 Attempting to play audio for page 12...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio with better error handling
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio9.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      console.log('🎵 Audio source:', audio.src);
+      console.log('🎵 Audio volume:', audioVolume);
+      console.log('🎵 Audio enabled:', audioEnabled);
+      
+      // Multiple event listeners for better compatibility
+      audio.addEventListener('loadstart', () => {
+        console.log('🔄 Audio loading started');
+      });
+      
+      audio.addEventListener('loadeddata', () => {
+        console.log('📊 Audio data loaded');
+      });
+      
+      audio.addEventListener('canplay', () => {
+        console.log('▶️ Audio can play');
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio playing for page 12');
+        }).catch(err => {
+          console.error('❌ Audio play failed:', err);
+          console.error('❌ Error details:', err.message);
+          showAudioError('Audio play failed: ' + err.message);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio load failed:', e);
+        console.error('❌ Audio src was:', audio.src);
+        console.error('❌ Error code:', audio.error ? audio.error.code : 'unknown');
+        showAudioError('Audio file not found or corrupted');
+      });
+      
+      // Force load
+      audio.load();
+    }
+
+    /* ================== UNIQUE AUDIO CODES ================== */
+    
+    // Audio function for Duncan
+    function playAudio_duncan() {
+      console.log('🎵 Playing audio_duncan...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_duncan.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_duncan playing');
+        }).catch(err => {
+          console.error('❌ Audio_duncan play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_duncan load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Audio function for Obi-Wan
+    function playAudio_obiwan() {
+      console.log('🎵 Playing audio_obiwan...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_obiwan.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_obiwan playing');
+        }).catch(err => {
+          console.error('❌ Audio_obiwan play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_obiwan load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Audio function for Collateral Murder Video
+    function playAudio_collateral() {
+      console.log('🎵 Playing audio_collateral...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_collateral.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_collateral playing');
+        }).catch(err => {
+          console.error('❌ Audio_collateral play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_collateral load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Audio function for Correa
+    function playAudio_correa() {
+      console.log('🎵 Playing audio_correa...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_correa.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_correa playing');
+        }).catch(err => {
+          console.error('❌ Audio_correa play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_correa load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Audio function for Siggi
+    function playAudio_siggi() {
+      console.log('🎵 Playing audio_siggi...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_siggi.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_siggi playing');
+        }).catch(err => {
+          console.error('❌ Audio_siggi play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_siggi load failed:', e);
+      });
+      
+      audio.load();
+    }
+    
+    // Audio function for Julian at Strasbourg
+    function playAudio_julian() {
+      console.log('🎵 Playing audio_julian...');
+      
+      if (!audioEnabled) {
+        console.log('🔇 Audio disabled, skipping');
+        return;
+      }
+      
+      // Stop any current audio
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+      
+      // Create new audio
+      const audio = new Audio();
+      audio.src = 'AUDIO/audio_julian.mp3';
+      audio.volume = audioVolume;
+      audio.preload = 'auto';
+      
+      audio.addEventListener('canplay', () => {
+        currentAudio = audio;
+        audio.play().then(() => {
+          console.log('✅ Audio_julian playing');
+        }).catch(err => {
+          console.error('❌ Audio_julian play failed:', err);
+        });
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('❌ Audio_julian load failed:', e);
+      });
+      
+      audio.load();
+    }
+
+    /* ================== PREP ================== */
+    const fullText = fullTextRaw.toUpperCase();
+    const pages = fullText.split(/\n{4,}/);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,\'"?!-—:;\n';
+
+ // Image modes
+     const IMG_OFF = 0;
+     const IMG_BG = 1;
+     const IMG_BELOW = 2;
+     const IMG_SIDE = 3;
+     const IMG_SMALL_SIDE = 4;
+    
+    // Helper functions for cycling through image modes
+    function getNextImageMode(currentMode) {
+      const modes = [IMG_OFF, IMG_BG, IMG_BELOW, IMG_SIDE, IMG_SMALL_SIDE];
+      const currentIndex = modes.indexOf(currentMode);
+      return modes[(currentIndex + 1) % modes.length];
+    }
+    
+    function getPreviousImageMode(currentMode) {
+      const modes = [IMG_OFF, IMG_BG, IMG_BELOW, IMG_SIDE, IMG_SMALL_SIDE];
+      const currentIndex = modes.indexOf(currentMode);
+      return modes[(currentIndex - 1 + modes.length) % modes.length];
+    }
+    
+    function markUserSetMode(pageIndex) {
+      const pageNumber = pageIndex + 1;
+      const imgEl = document.getElementById(`img-${pageNumber}`);
+      if (imgEl) {
+imgEl.setAttribute('data-user-set', 'true');
+      }
+      // Save to localStorage for persistence across refreshes
+      savePageModeToStorage(pageIndex, pageModes[pageIndex]);
+    }
+    
+    function savePageModeToStorage(pageIndex, mode) {
+      try {
+const storedModes = JSON.parse(localStorage.getItem('pitchDeckImageModes') || '{}');
+storedModes[pageIndex] = mode;
+localStorage.setItem('pitchDeckImageModes', JSON.stringify(storedModes));
+      } catch (e) {
+console.warn('Could not save image mode to localStorage:', e);
+      }
+    }
+    
+    function loadPageModesFromStorage() {
+      try {
+const storedModes = JSON.parse(localStorage.getItem('pitchDeckImageModes') || '{}');
+Object.keys(storedModes).forEach(pageIndex => {
+  const index = parseInt(pageIndex);
+  if (index >= 0 && index < pageModes.length) {
+    pageModes[index] = storedModes[pageIndex];
+    // Mark as user-set so auto-detection doesn't override
+    setTimeout(() => {
+      const imgEl = document.getElementById(`img-${index + 1}`);
+      if (imgEl) {
+imgEl.setAttribute('data-user-set', 'true');
+      }
+    }, 100);
+  }
+});
+      } catch (e) {
+console.warn('Could not load image modes from localStorage:', e);
+      }
+    }
+    
+ const pageModes = new Array(pages.length).fill(IMG_BG); // Default to background image mode for all pages
+    
+    
+    // Load saved image modes from localStorage
+    loadPageModesFromStorage();
+    
+    // Initialize keyword scanning
+    scanAvailableKeywords().then(() => {
+      console.log('Keyword scanning complete, starting presentation...');
+      
+      // Direct test of photo_ignorant.webp
+      console.log('🔍 Direct test: Creating photo_ignorant.webp image...');
+      const testImg = document.createElement('img');
+      testImg.src = 'photos/photo_ignorant.webp';
+      testImg.onload = () => {
+        console.log('✅ Direct test: photo_ignorant.webp loaded successfully!');
+        availableKeywords.add('ignorant');
+        console.log('Added "ignorant" to available keywords');
+      };
+      testImg.onerror = () => {
+        console.log('❌ Direct test: photo_ignorant.webp failed to load');
+      };
+      
+      startPage(0);
+    });
+    
+    // Debug function - call from browser console: testImage('ignorant')
+    window.testImage = function(keyword) {
+      console.log(`Testing image for keyword: ${keyword}`);
+      const img = document.createElement('img');
+      img.src = `photos/photo_${keyword}.webp`;
+      img.onload = () => {
+        console.log(`✅ Image loaded: photos/photo_${keyword}.webp`);
+        availableKeywords.add(keyword);
+        console.log('Available keywords:', Array.from(availableKeywords));
+      };
+      img.onerror = () => {
+        console.log(`❌ Image failed: photos/photo_${keyword}.webp`);
+      };
+    };
+    
+    // Debug function - test audio 8
+    window.testAudio8 = function() {
+      console.log('🎵 Testing audio 8...');
+      playAudioForPage8();
+    };
+    
+    // Debug function - test audio 12
+    window.testAudio12 = function() {
+      console.log('🎵 Testing audio 12...');
+      playAudioForPage12();
+    };
+    
+    // Simple test function for audio 8
+    window.testAudio7Simple = function() {
+      console.log('🎵 Testing audio7.mp3...');
+      const audio = new Audio('AUDIO/audio7.mp3');
+      audio.volume = 0.7;
+      audio.play().then(() => {
+        console.log('✅ Audio7 playing successfully');
+      }).catch(err => {
+        console.log('❌ Audio7 failed:', err.message);
+      });
+    };
+    
+    // Simple test function for audio 15
+    window.testAudio15Simple = function() {
+      console.log('🎵 Testing audio15.mp3...');
+      const audio = new Audio('AUDIO/audio15.mp3');
+      audio.volume = 0.7;
+      audio.play().then(() => {
+        console.log('✅ Audio15 playing successfully');
+      }).catch(err => {
+        console.log('❌ Audio15 failed:', err.message);
+      });
+    };
+    
+    // Test visualizer function
+    window.testVisualizer = function() {
+      console.log('🎨 Testing visualizer...');
+      const canvas = document.getElementById('audio-visualizer');
+      if (canvas) {
+        canvas.style.display = 'block';
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'red';
+        ctx.fillRect(100, 100, 200, 200);
+        console.log('✅ Visualizer test - red square should appear');
+      } else {
+        console.error('❌ Canvas not found');
+      }
+    };
+    
+
+    // DOM
+    const pageEl = document.getElementById('page');
+    const textWrap = document.getElementById('text-wrap');
+    const el = document.getElementById('unscramble');
+    const promptElem = document.getElementById('prompt');
+    const navMsg = document.getElementById('nav-msg');
+    const pageCounterEl = document.getElementById('current-page');
+
+    let currentPage = 0;
+    let isAnimating = false;
+    let currentInterval = null;
+    let availableKeywords = new Set(); // Store available photo keywords
+    let audioTimeout = null; // Track audio timeout
+
+    // Test if a specific photo file exists
+    function testPhotoExists(keyword, format) {
+      return new Promise((resolve) => {
+        const testImg = new Image();
+        const timeout = setTimeout(() => {
+          resolve(false);
+        }, 1000);
+        
+        testImg.onload = () => {
+          clearTimeout(timeout);
+          resolve(true);
+        };
+        testImg.onerror = () => {
+          clearTimeout(timeout);
+          resolve(false);
+        };
+        testImg.src = `photos/photo_${keyword}.${format}`;
+      });
+    }
+
+    // Scan photos folder to find available photo_keyword files
+    async function scanAvailableKeywords() {
+      const formats = ['webp', 'jpg', 'jpeg', 'png', 'gif'];
+      const keywords = new Set();
+      
+      // Common keywords to test based on the content
+      const testKeywords = [
+        'ignorant', 'assange', 'wikileaks', 'bitcoin', 'crypto', 'cryptocurrency', 'blockchain',
+        'surveillance', 'privacy', 'freedom', 'journalism', 'truth', 'transparency',
+        'government', 'state', 'power', 'control', 'censorship', 'propaganda',
+        'war', 'military', 'diplomacy', 'leaks', 'documents', 'secrets',
+        'collateral', 'murder', 'video', 'footage', 'evidence',
+        'prosecution', 'trial', 'prison', 'embassy', 'asylum', 'extradition',
+        'moreno', 'ecuador', 'britain', 'america', 'cia', 'fbi', 'nsa',
+        'cypherpunk', 'anonymity', 'encryption', 'decentralization', 'resistance',
+        'activist', 'whistleblower', 'expose', 'revelation', 'scandal', 'corruption'
+      ];
+      
+      console.log('Scanning for available photo keywords...');
+      
+      // First, test photo_ignorant.webp specifically
+      console.log('🔍 Testing photo_ignorant.webp specifically...');
+      const ignorantExists = await testPhotoExists('ignorant', 'webp');
+      console.log(`photo_ignorant.webp exists: ${ignorantExists}`);
+      
+      // Test each keyword with each format
+      for (const keyword of testKeywords) {
+        let found = false;
+        for (const format of formats) {
+          const exists = await testPhotoExists(keyword, format);
+          if (exists) {
+            keywords.add(keyword);
+            console.log(`✅ Found: photo_${keyword}.${format}`);
+            found = true;
+            break; // Found this keyword, move to next
+          } else {
+            console.log(`❌ Not found: photo_${keyword}.${format}`);
+          }
+        }
+        if (!found) {
+          console.log(`❌ No photo found for keyword: ${keyword}`);
+        }
+      }
+      
+      availableKeywords = keywords;
+      
+      // Manual override for testing - force add "ignorant" if it exists
+      const ignorantTest = await testPhotoExists('ignorant', 'webp');
+      if (ignorantTest) {
+        availableKeywords.add('ignorant');
+        console.log('✅ Manually added "ignorant" to available keywords');
+      }
+      
+      console.log(`Available photo keywords:`, Array.from(keywords));
+      return keywords;
+    }
+
+    // Extract keywords from page text that have corresponding photo files
+    function extractKeywords(pageText) {
+      // Convert to lowercase and extract meaningful words
+      const words = pageText.toLowerCase()
+        .replace(/[^\w\s]/g, ' ') // Remove punctuation
+        .split(/\s+/)
+        .filter(word => word.length > 3) // Only words longer than 3 characters
+        .filter(word => !['that', 'this', 'with', 'from', 'they', 'have', 'been', 'were', 'said', 'will', 'would', 'could', 'should', 'about', 'above', 'below', 'under', 'over', 'through', 'during', 'before', 'after', 'while', 'since', 'until', 'unless', 'because', 'although', 'though', 'however', 'therefore', 'moreover', 'furthermore', 'nevertheless', 'nonetheless'].includes(word)) // Filter out common words
+        .filter(word => availableKeywords.has(word)); // Only return words that have corresponding photo files
+      
+      return [...new Set(words)]; // Remove duplicates
+    }
+
+    // Simple image function - check what photos actually exist
+    function showImage(pageIndex) {
+      // Hide all existing images first
+      document.querySelectorAll('#page img').forEach(img => {
+img.className = '';
+      });
+      
+      const pageNumber = pageIndex + 1;
+      let imgEl = document.getElementById(`img-${pageNumber}`);
+      
+      // If no image exists for this page yet, try to create one (original system)
+      if (!imgEl) {
+imgEl = createImageForPage(pageNumber);
+      }
+      
+      // Also try keyword-based matching as fallback
+      if (!imgEl) {
+        const pageText = pages[pageIndex];
+        const keywords = extractKeywords(pageText);
+        console.log(`Page ${pageIndex + 1} text preview:`, pageText.substring(0, 100) + '...');
+        console.log(`Page ${pageIndex + 1} available keywords:`, Array.from(availableKeywords));
+        console.log(`Page ${pageIndex + 1} matched keywords:`, keywords);
+        
+        for (const keyword of keywords) {
+          console.log(`🔍 Creating new image for keyword: ${keyword}`);
+          imgEl = createImageForKeyword(keyword);
+       if (imgEl) {
+            console.log(`✅ Created image for keyword: ${keyword}`);
+            break;
+          }
+        }
+      }
+      
+      if (!imgEl) {
+        console.log(`❌ No image found for page ${pageIndex + 1}`);
+      }
+      
+     // Show image if it exists
+       if (imgEl) {
+ 
+ const mode = pageModes[pageIndex];
+ if (mode === IMG_BG) imgEl.className = 'show-bg';
+ else if (mode === IMG_BELOW) imgEl.className = 'show-below';
+ else if (mode === IMG_SIDE) imgEl.className = 'show-side';
+ else if (mode === IMG_SMALL_SIDE) imgEl.className = 'show-small-side';
+       }
+      
+      // Only adjust text if there's actually an image showing
+      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+adjustTextContainerWidth(pageModes[pageIndex]);
+      } else {
+adjustTextContainerWidth(IMG_OFF);
+      }
+    }
+    
+    
+    // Adjust text container when side image is active
+    function adjustTextForSideImage() {
+      adjustTextContainerWidth(IMG_SIDE);
+    }
+    
+    // Reset text container when image is turned off
+    function resetTextContainer() {
+      adjustTextContainerWidth(IMG_OFF);
+    }
+    
+    // Adjust text container width based on image mode
+    function adjustTextContainerWidth(imageMode) {
+      const textWrap = document.getElementById('text-wrap');
+      if (!textWrap) return;
+      
+   if (imageMode === IMG_SIDE) {
+  // Side mode: text on left, image on right
+  textWrap.style.setProperty('width', '50%', 'important');
+  textWrap.style.setProperty('max-width', '50%', 'important');
+  textWrap.style.setProperty('position', 'relative', 'important');
+  textWrap.style.setProperty('z-index', '2', 'important');
+  textWrap.classList.add('side-mode');
+  textWrap.classList.remove('small-side-mode');
+ } else if (imageMode === IMG_SMALL_SIDE) {
+   // Small side mode: text on left, smaller image on right
+   textWrap.style.setProperty('width', '75%', 'important');
+   textWrap.style.setProperty('max-width', '75%', 'important');
+   textWrap.style.setProperty('position', 'relative', 'important');
+   textWrap.style.setProperty('z-index', '2', 'important');
+   textWrap.classList.add('small-side-mode');
+   textWrap.classList.remove('side-mode');
+ } else {
+  // All other modes: text uses full width
+  textWrap.style.setProperty('width', '100%', 'important');
+  textWrap.style.setProperty('max-width', '100%', 'important');
+  textWrap.style.setProperty('position', '', 'important');
+  textWrap.style.setProperty('z-index', '', 'important');
+  textWrap.classList.remove('side-mode');
+  textWrap.classList.remove('small-side-mode');
+}
+    }
+    
+    
+    // Create image for a page number - tries multiple formats and naming patterns
+    function createImageForPage(pageNumber) {
+      const img = document.createElement('img');
+      img.id = `img-${pageNumber}`;
+      img.alt = `Page ${pageNumber} Image`;
+      
+      // Start invisible - only show when successfully loaded
+      img.style.opacity = '0';
+      img.style.transition = 'opacity 0.2s ease-in-out';
+      
+      // Add to page first (invisible)
+      document.getElementById('page').appendChild(img);
+      
+      // Try to find any image that starts with the page number
+      findImageForPage(img, pageNumber);
+      
+      // Only show image when it loads successfully
+      img.addEventListener('load', () => {
+        console.log(`Image loaded successfully for page ${pageNumber}`);
+        img.style.opacity = '0.765';
+
+        // Update page mode and layout if this is the current page
+        const pageIndex = pageNumber - 1;
+        if (pageIndex === currentPage) {
+          adjustTextContainerWidth(pageModes[pageIndex]);
+        }
+
+        // Apply current overlay mode to new image
+        applyOverlayToImage(img, currentOverlayMode);
+      });
+      
+      // Handle image loading errors gracefully
+      img.addEventListener('error', () => {
+        console.log(`Failed to load image for page ${pageNumber}`);
+        img.style.display = 'none';
+      });
+      
+      return img;
+    }
+    
+    // Find any image that starts with the page number
+    function findImageForPage(img, pageNumber) {
+      const formats = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'tif', 'avif', 'jfif', 'pjpeg'];
+      
+      // Try different naming patterns for this page number
+      const namingPatterns = [
+        `photo${pageNumber}`,           // photo10.jpg
+        `picture${pageNumber}`,         // picture10.jpg
+        `photo${pageNumber}_collateral`, // photo10_collateral.jpg
+        `picture${pageNumber}_collateral`, // picture10_collateral.jpg
+        `photo${pageNumber}_`,          // photo10_anything.jpg
+        `picture${pageNumber}_`         // picture10_anything.jpg
+      ];
+      
+      // Try each naming pattern with each format
+      for (const pattern of namingPatterns) {
+        for (const format of formats) {
+          const testSrc = `photos/${pattern}.${format}`;
+          const testImg = new Image();
+          
+          testImg.onload = function() {
+            console.log(`✅ Found working image: ${testSrc}`);
+            img.src = testSrc;
+            return; // Stop trying once we find one
+          };
+          
+          testImg.onerror = function() {
+            // Continue trying other patterns/formats
+          };
+          
+          testImg.src = testSrc;
+        }
+      }
+      
+      // If no specific pattern worked, try a more general approach
+      // This will try to find any file that starts with the page number
+      setTimeout(() => {
+        if (!img.src) {
+          console.log(`Trying general search for page ${pageNumber}...`);
+          tryGeneralImageSearch(img, pageNumber, formats);
+        }
+      }, 100);
+    }
+    
+    // Try to find any image file that starts with the page number
+    function tryGeneralImageSearch(img, pageNumber, formats) {
+      // Common prefixes to try
+      const prefixes = ['photo', 'picture', 'img', 'image'];
+      
+      for (const prefix of prefixes) {
+        for (const format of formats) {
+          // Try exact match first
+          const exactSrc = `photos/${prefix}${pageNumber}.${format}`;
+          const testImg = new Image();
+          
+          testImg.onload = function() {
+            console.log(`✅ Found working image (exact): ${exactSrc}`);
+            img.src = exactSrc;
+            return;
+          };
+          
+          testImg.onerror = function() {
+            // Try with underscore and common suffixes
+            const suffixes = ['_collateral', '_murder', '_video', '_footage', '_evidence'];
+            for (const suffix of suffixes) {
+              const suffixSrc = `photos/${prefix}${pageNumber}${suffix}.${format}`;
+              const suffixTestImg = new Image();
+              
+              suffixTestImg.onload = function() {
+                console.log(`✅ Found working image (with suffix): ${suffixSrc}`);
+                img.src = suffixSrc;
+                return;
+              };
+              
+              suffixTestImg.onerror = function() {
+                // Continue trying
+              };
+              
+              suffixTestImg.src = suffixSrc;
+            }
+          };
+          
+          testImg.src = exactSrc;
+        }
+      }
+    }
+
+    // Create image for keyword-based matching
+    function createImageForKeyword(keyword) {
+      const img = document.createElement('img');
+      img.id = `img-${keyword}`;
+      img.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+height: 100%;
+        object-fit: cover;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+      `;
+      
+      // Try different image formats for the keyword
+      tryImageFormats(img, keyword, 0);
+      
+      // Only show image when it loads successfully
+      img.addEventListener('load', () => {
+        console.log(`Image loaded successfully for keyword: ${keyword}`);
+        img.style.opacity = '0.765';
+
+        // Update page mode and layout if this is the current page
+        const pageIndex = currentPage;
+        if (pageIndex === currentPage) {
+          adjustTextContainerWidth(pageModes[pageIndex]);
+        }
+
+        // Apply current overlay mode to new image
+        applyOverlayToImage(img, currentOverlayMode);
+      });
+
+      // Handle image loading errors gracefully
+      img.addEventListener('error', () => {
+        console.log(`Failed to load image for keyword: ${keyword}`);
+        img.style.display = 'none';
+      });
+
+      return img;
+    }
+
+
+         // Universal image support - tries all possible formats
+     function tryImageFormats(img, keyword, formatIndex) {
+       
+       // Start with most compatible formats, then try everything else
+       const formats = [
+ 'jpg', 'jpeg', 'png', 'gif',  // Universal support
+ 'webp', 'svg',// Modern browsers
+ 'bmp', 'tiff', 'tif', // Desktop browsers
+ 'avif', 'jfif', 'pjpeg'       // Newer formats
+       ];
+       
+       if (formatIndex >= formats.length) {
+ // All formats failed, remove the image
+ console.log(`No image found for keyword '${keyword}'`);
+ img.remove();
+ return;
+       }
+       
+       const format = formats[formatIndex];
+       const testSrc = `photos/photo_${keyword}.${format}`;
+       
+       // Test if this format file exists by creating a test image
+       const testImg = new Image();
+       testImg.onload = function() {
+ // File exists and format is supported - use it!
+ console.log(`✅ Found working image: ${testSrc}`);
+ img.src = testSrc;
+       };
+       testImg.onerror = function() {
+ // This format/file doesn't work, try next
+ tryImageFormats(img, keyword, formatIndex + 1);
+       };
+       testImg.src = testSrc;
+     }
+
+    /* ================== SIMPLE TEXT SIZING ================== */
+      function truncateTextToFit(element, text) {
+element.textContent = text;
+
+      // Simple approach: just ensure text fits without complex calculations
+const textWrap = document.getElementById('text-wrap');
+const availableHeight = textWrap ? textWrap.clientHeight : element.clientHeight;
+
+      // Only adjust if text overflows
+if (element.scrollHeight > availableHeight) {
+  let fontSize = parseFloat(getComputedStyle(element).fontSize);
+  
+        // Reduce font size gradually until it fits
+        while (element.scrollHeight > availableHeight && fontSize > 1.0) {
+          fontSize -= 0.1;
+    element.style.fontSize = fontSize + 'rem';
+  }
+  
+        // If still doesn't fit, add padding
+  if (element.scrollHeight > availableHeight) {
+    element.style.paddingBottom = '2rem';
+  }
+        }
+      }
+
+    /* ================== SCRAMBLE ================== */
+    function scrambleFastChunks(element, text, onComplete) {
+      if (currentInterval) {
+clearInterval(currentInterval);
+currentInterval = null;
+      }
+      
+      let index = 0, chunkSize = 15, scrambled = text.split(''), len = text.length;
+      for (let i=0;i<len;i++) scrambled[i] = /\s/.test(text[i]) ? text[i] : chars[Math.floor(Math.random()*chars.length)];
+      isAnimating = true; promptElem.style.visibility='hidden'; navMsg.style.visibility='hidden';
+
+      // Calculate total chunks for audio sync
+      const totalChunks = Math.ceil(len / chunkSize);
+      
+      // Initialize audio context on first user interaction
+      initAudioContext();
+
+      currentInterval = setInterval(() => {
+const display = scrambled.slice();
+for (let i=0;i<index;i++){
+  let s=i*chunkSize, e=Math.min(s+chunkSize,len);
+  for (let j=s;j<e;j++) display[j]=text[j];
+}
+for (let k=index*chunkSize;k<len;k++) display[k] = /\s/.test(text[k]) ? text[k] : chars[Math.floor(Math.random()*chars.length)];
+element.textContent = display.join('');
+
+// Play typing audio for this chunk
+playTypingAudio();
+
+index++;
+if ((index*chunkSize)>=len){
+  clearInterval(currentInterval);
+  currentInterval = null;
+  truncateTextToFit(element, text);
+  isAnimating=false;
+  
+  // Only show "PRESS SPACEBAR TO CONTINUE" for first 2 pages
+  if (currentPage < 2) {
+  navMsg.textContent='PRESS SPACEBAR TO CONTINUE';
+  navMsg.style.visibility='visible';
+  }
+  
+  onComplete && onComplete();
+}
+      },100);
+    }
+
+         /* ================== PAGE RENDER ================== */
+  function startPage(pageIndex){
+        if (pageIndex >= pages.length) pageIndex = 0;
+        if (pageIndex < 0) pageIndex = pages.length - 1;
+        currentPage = pageIndex;
+        
+        pageCounterEl.textContent = pageIndex + 1;
+        navMsg.style.visibility = 'hidden';
+        
+        // Set data-page attribute for CSS targeting
+        pageEl.setAttribute('data-page', pageIndex + 1);
+        
+       
+      // Use simple, consistent font sizing - smaller on mobile
+        const isMobile = window.innerWidth <= 768;
+        el.style.fontSize = isMobile ? '0.8rem' : '1.2rem';
+        el.style.paddingBottom = ''; // Reset any padding
+       
+       // Show text for all pages
+       if (pageIndex < pages.length) {
+         const textWrap = document.getElementById('text-wrap');
+         if (textWrap) {
+           textWrap.style.display = 'block';
+         }
+         
+         el.textContent='';
+         isAnimating = false;
+         
+         // Remove any existing animation classes
+         el.classList.remove('collateral-murder-slide');
+         
+         // Check if this is the Collateral Murder video slide
+         const isCollateralMurderSlide = pages[pageIndex].includes('It published the infamous Collateral Murder video in 2010');
+         
+         scrambleFastChunks(el, pages[pageIndex], () => {
+           // Text displayed
+           if (isCollateralMurderSlide) {
+             console.log('Collateral Murder slide detected, starting animation...');
+             // Add animation class after text is fully displayed
+             setTimeout(() => {
+               el.classList.add('collateral-murder-slide');
+               console.log('Animation class added');
+               
+               // After animation completes, create a persistent copy
+               setTimeout(() => {
+                 createPersistentText();
+                 console.log('Persistent text created');
+               }, 3000); // After 3 second animation
+             }, 1000); // Wait 1 second after text is displayed
+           }
+         });
+       }
+       
+       showImage(pageIndex);
+       
+       // Audio triggers for specific pages
+       if (pageIndex + 1 === 3) {
+         console.log('🎵 Playing Obi-Wan audio for page 3');
+         playAudio_obiwan();
+       }
+       
+       if (pageIndex + 1 === 4) {
+         console.log('🎵 Playing Duncan audio for page 4');
+         playAudio_duncan();
+       }
+       
+       if (pageIndex + 1 === 6) {
+         console.log('🎵 Playing Collateral Murder audio for page 6');
+         playAudio_collateral();
+       }
+       
+       if (pageIndex + 1 === 7) {
+         console.log('🎵 Playing Correa and Siggi audio for page 7');
+         playAudio_correa();
+         playAudio_siggi();
+       }
+       
+       if (pageIndex + 1 === 9) {
+         console.log('🎵 Playing Julian audio for page 9');
+         playAudio_julian();
+       }
+       
+       // Show video on slide 15
+       console.log(`🔍 Debug: Current page ${pageIndex + 1}, checking for video on slide 15...`);
+       if (pageIndex + 1 === 15) {
+         console.log('🎬 SLIDE 15 - Showing video...');
+         showVideoBackground();
+         // Hide video2 when showing video15
+         hideVideo2Background();
+       } else {
+         console.log(`🎬 Not slide 15 (current: ${pageIndex + 1}), hiding video...`);
+         // Hide video on other pages
+         hideVideoBackground();
+       }
+       
+       // Show video2 on slide 2
+       console.log(`🔍 Debug: Current page ${pageIndex + 1}, checking for video2 on slide 2...`);
+       if (pageIndex + 1 === 2) {
+         console.log('🎬 SLIDE 2 - Showing video2...');
+         showVideo2Background();
+       } else {
+         console.log(`🎬 Not slide 2 (current: ${pageIndex + 1}), hiding video2...`);
+         // Hide video2 on other pages
+         hideVideo2Background();
+       }
+     }
+
+    // Create persistent text that stays on screen
+    function createPersistentText() {
+      // Remove any existing persistent text
+      const existing = document.getElementById('persistent-text');
+      if (existing) {
+        existing.remove();
+      }
+      
+      // Create new persistent text element
+      const persistentDiv = document.createElement('div');
+      persistentDiv.id = 'persistent-text';
+      
+      const textContent = document.createElement('div');
+      textContent.className = 'text-content';
+      textContent.textContent = 'It published the infamous Collateral Murder video in 2010';
+      
+      persistentDiv.appendChild(textContent);
+      document.body.appendChild(persistentDiv);
+     }
+
+    /* ================== NAV ================== */
+    let lastAdvance = 0;
+    function throttle(){ const now=Date.now(); if (now-lastAdvance<300) return false; lastAdvance=now; return true; }
+    function safeAdvance(){ if (!throttle()) return; startPage(currentPage+1); }
+    function goBack(){ if (!throttle()) return; startPage(currentPage-1); }
+
+    document.getElementById('nav-prev').addEventListener('pointerdown', goBack, {passive:true});
+    document.getElementById('nav-next').addEventListener('pointerdown', safeAdvance, {passive:true});
+    document.getElementById('nav-prev').addEventListener('touchstart', goBack, {passive:true});
+    document.getElementById('nav-next').addEventListener('touchstart', safeAdvance, {passive:true});
+    document.getElementById('nav-prev').addEventListener('click', goBack);
+    document.getElementById('nav-next').addEventListener('click', safeAdvance);
+ document.addEventListener('pointerdown', (e)=>{ 
+       if (e.target.id==='nav-prev'||e.target.id==='nav-next') return; 
+       
+       // Left half of screen goes back, right half goes forward
+       if (e.clientX < window.innerWidth / 2) {
+ goBack();
+       } else {
+ safeAdvance();
+       }
+     }, {passive:true});
+     
+     document.addEventListener('touchstart', (e)=>{ 
+       if (e.target.id==='nav-prev'||e.target.id==='nav-next') return; 
+       
+       // Left half of screen goes back, right half goes forward
+       if (e.touches[0].clientX < window.innerWidth / 2) {
+ goBack();
+       } else {
+ safeAdvance();
+       }
+     }, {passive:true});
+ document.addEventListener('click', (e)=>{ 
+       if (e.target.id==='nav-prev'||e.target.id==='nav-next') return; 
+       
+       // Left half of screen goes back, right half goes forward
+       if (e.clientX < window.innerWidth / 2) {
+ goBack();
+       } else {
+ safeAdvance();
+       }
+     });
+
+    // Simplified font system
+    let currentFontIndex = 1; // Start with IBM3270 (index 1) as default
+    let currentFontSize = 1.0; // Size multiplier (1.0 = 100% of base size)
+         const fonts = [
+       { family: 'monospace', size: '1.2rem' },
+       { family: 'IBM3270', size: '1.2rem' },
+       { family: 'PixelCarnageMono', size: '1.2rem' },
+       { family: 'Crisp', size: '1.2rem' },
+       { family: 'ProggyCleanCE', size: '1.2rem' },
+       { family: 'ProggySquare', size: '1.2rem' }
+     ];
+    
+    function cycleFontForward() {
+      currentFontIndex = (currentFontIndex + 1) % fonts.length;
+      applyCurrentFont();
+    }
+    
+    function cycleFontBackward() {
+      currentFontIndex = (currentFontIndex - 1 + fonts.length) % fonts.length;
+      applyCurrentFont();
+    }
+    
+             function applyCurrentFont() {
+      const selectedFont = fonts[currentFontIndex];
+      console.log('Applying font:', selectedFont);
+      
+      // Update the CSS custom property
+      document.documentElement.style.setProperty('--font-family', selectedFont.family);
+      
+      // Apply font family to all text elements
+      const allTextElements = document.querySelectorAll('#unscramble, #prompt, #nav-msg, #nav-prev, #nav-next, #page-counter');
+      allTextElements.forEach(el => {
+        if (el) {
+          el.style.fontFamily = selectedFont.family;
+        }
+      });
+      
+      // Also apply to body to ensure all elements inherit the font
+      document.body.style.fontFamily = selectedFont.family;
+      
+      console.log(`Font changed to: ${selectedFont.family}`);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      // Mute any keyboard sounds
+      e.preventDefault();
+      
+      if (e.code==='Space'||e.code==='ArrowRight'){ startPage(currentPage+1); }
+      else if (e.code==='ArrowLeft'){ startPage(currentPage-1); }
+
+      const k = e.key;
+     if (k==='ArrowUp'){ 
+ pageModes[currentPage]=getNextImageMode(pageModes[currentPage]); 
+ markUserSetMode(currentPage); 
+ showImage(currentPage); 
+       }
+       else if (k==='ArrowDown'){ 
+ pageModes[currentPage]=getPreviousImageMode(pageModes[currentPage]); 
+ markUserSetMode(currentPage); 
+ showImage(currentPage); 
+       }
+      // Font cycling removed - using fixed font system
+      else if (k==='l'||k==='L'){ 
+pageModes[currentPage]=IMG_BELOW; 
+markUserSetMode(currentPage); 
+showImage(currentPage); 
+      }
+     else if (k==='s'||k==='S'){ 
+pageModes[currentPage]=IMG_SIDE; 
+markUserSetMode(currentPage); 
+showImage(currentPage); 
+adjustTextForSideImage(); 
+      }
+       else if (k==='a'||k==='A'){ 
+pageModes[currentPage]=IMG_SMALL_SIDE; 
+markUserSetMode(currentPage); 
+showImage(currentPage); 
+adjustTextForSideImage(); 
+      }
+       else if (k==='o'||k==='O'){ 
+pageModes[currentPage]=IMG_OFF; 
+markUserSetMode(currentPage); 
+showImage(currentPage); 
+resetTextContainer(); 
+      }
+      else if (k==='z'||k==='Z'){ toggleGreenOverlay('full'); }
+      else if (k==='x'||k==='X'){ toggleGreenOverlay('half'); }
+      else if (k==='c'||k==='C'){ toggleGreenOverlay('off'); }
+      else if (k==='m'||k==='M'){ toggleAudio(); }
+      else if (k==='t'||k==='T'){ testTypingAudio(); }
+      else if (k==='f'||k==='F'){ toggleFullscreen(); }
+      else if (k==='a'||k==='A'){ 
+        console.log('🧪 A key pressed - testing audio...');
+        testAudio();
+      }
+      else if (k==='v'||k==='V'){ 
+        console.log('🧪 V key pressed - testing video...');
+        showVideoBackground();
+      }
+      else if (k==='h'||k==='H'){ 
+        console.log('🧪 H key pressed - hiding video...');
+        hideVideoBackground();
+      }
+      else if (k==='2'||k==='2'){ 
+        console.log('🧪 2 key pressed - testing video2...');
+        showVideo2Background();
+      }
+      else if (k==='j'||k==='J'){ 
+        console.log('🧪 J key pressed - hiding video2...');
+        hideVideo2Background();
+      }
+    });
+    
+    // Fullscreen functionality
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+document.documentElement.requestFullscreen().catch(err => {
+  console.log(`Error attempting to enable fullscreen: ${err.message}`);
+});
+      } else {
+document.exitFullscreen();
+      }
+    }
+
+    /* ================== COLOR/GLOW ================== */
+    (function(){
+      const navPrev = document.getElementById('nav-prev');
+      const navNext = document.getElementById('nav-next');
+      const terminals = [document.getElementById('unscramble'), document.getElementById('prompt'), document.getElementById('nav-msg'), navPrev, navNext, document.getElementById('page-counter')];
+      let colorIndex=2; // Default to soft green (option 3)
+      const colors=['#CCCCCC','#00FF00','#66FF66'];
+      function apply(){
+terminals.forEach(el=>{ if(!el) return;
+  el.style.color = colors[colorIndex];
+  el.style.textShadow = `0 0 2px ${colors[colorIndex]}, 0 0 12px ${colors[colorIndex]}`; // Glow always on
+});
+
+// Update cursor color to match
+const customCursor = document.getElementById('custom-cursor');
+if (customCursor) {
+  customCursor.style.background = colors[colorIndex];
+  customCursor.style.boxShadow = `0 0 2px ${colors[colorIndex]}, 0 0 12px ${colors[colorIndex]}`;
+}
+      }
+      document.addEventListener('keydown', (e)=>{
+if (e.key==='1'||e.key==='2'||e.key==='3'){ colorIndex=parseInt(e.key,10)-1; apply(); }
+      });
+      apply();
+    })();
+
+    /* ================== INIT ================== */
+    window.onload = () => {
+      // Mute all audio by default
+      document.addEventListener('keydown', (e) => {
+        e.preventDefault();
+      });
+      
+      // Mute all audio elements by default
+      document.querySelectorAll('audio, video').forEach(media => {
+        media.muted = true;
+        media.volume = 0;
+      });
+      
+      // Video will only show on page 15 via the page navigation logic
+      // Hide any images that fail to load
+      document.querySelectorAll('#page img').forEach(img => {
+img.addEventListener('error', () => {
+  img.style.display = 'none';
+});
+      });
+      
+      // Custom cursor functionality
+      const customCursor = document.getElementById('custom-cursor');
+      
+      document.addEventListener('mousemove', (e) => {
+customCursor.style.display = 'block';
+customCursor.style.left = e.clientX - 10 + 'px';
+customCursor.style.top = e.clientY - 10 + 'px';
+      });
+      
+      document.addEventListener('mouseleave', () => {
+customCursor.style.display = 'none';
+      });
+      
+      // Apply the default font (IBM3270) on page load
+      applyCurrentFont();
+    };
+    
+    // Global green overlay toggle function
+    let currentOverlayMode = 'full'; // Track current overlay mode - default to full green
+    
+    function toggleGreenOverlay(mode) {
+      currentOverlayMode = mode; // Store the current mode
+      const images = document.querySelectorAll('#page img');
+      images.forEach(img => {
+applyOverlayToImage(img, mode);
+      });
+      
+    }
+    
+       // Apply overlay to a specific image
+      function applyOverlayToImage(img, mode) {
+// Check if this is photo23 (which should stay dimmed) or page 10 images (which should be darker)
+const isDimmedPhoto = img.id === 'img-23';
+const isDarkerPhoto = img.id.startsWith('img-10');
+const baseBrightness = isDarkerPhoto ? 0.35 : (isDimmedPhoto ? 0.32 : 0.64);
+
+if (mode === 'full') {
+  img.style.filter = `grayscale(1) brightness(${baseBrightness}) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2)`;
+} else if (mode === 'half') {
+  img.style.filter = `brightness(${baseBrightness}) grayscale(1)`;
+} else if (mode === 'off') {
+  img.style.filter = `brightness(${baseBrightness})`;
+}
+      }
+    
+     
+     
+  </script>
+  
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://threejs.org/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://threejs.org/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://threejs.org/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://threejs.org/examples/js/postprocessing/OutputPass.js"></script>
+  
+  <!-- Shaders for 3D Audio Visualizer -->
+  <script id="vertexshader" type="vertex">
+    vec3 mod289(vec3 x) {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec4 mod289(vec4 x) {
+      return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+
+    vec4 permute(vec4 x) {
+      return mod289(((x*34.0)+10.0)*x);
+    }
+
+    vec4 taylorInvSqrt(vec4 r) {
+      return 1.79284291400159 - 0.85373472095314 * r;
+    }
+
+    vec3 fade(vec3 t) {
+      return t*t*t*(t*(t*6.0-15.0)+10.0);
+    }
+
+    float pnoise(vec3 P, vec3 rep) {
+      vec3 Pi0 = mod(floor(P), rep);
+      vec3 Pi1 = mod(floor(P) + vec3(1.0), rep);
+      Pi0 = mod289(Pi0);
+      Pi1 = mod289(Pi1);
+      vec3 Pf0 = fract(P);
+      vec3 Pf1 = Pf0 - vec3(1.0);
+      vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+      vec4 iy = vec4(Pi0.yy, Pi1.yy);
+      vec4 iz0 = vec4(Pi0.z);
+      vec4 iz1 = vec4(Pi1.z);
+
+      vec4 ixy = permute(permute(ix) + iy);
+      vec4 ixy0 = permute(ixy + iz0);
+      vec4 ixy1 = permute(ixy + iz1);
+
+      vec4 gx0 = ixy0 * (1.0 / 7.0);
+      vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+      gx0 = fract(gx0);
+      vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+      vec4 sz0 = step(gz0, vec4(0.0));
+      gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+      gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+
+      vec4 gx1 = ixy1 * (1.0 / 7.0);
+      vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+      gx1 = fract(gx1);
+      vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+      vec4 sz1 = step(gz1, vec4(0.0));
+      gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+      gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+
+      vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+      vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+      vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+      vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+      vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+      vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+      vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+      vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+
+      vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+      g000 *= norm0.x;
+      g010 *= norm0.y;
+      g100 *= norm0.z;
+      g110 *= norm0.w;
+      vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+      g001 *= norm1.x;
+      g011 *= norm1.y;
+      g101 *= norm1.z;
+      g111 *= norm1.w;
+
+      float n000 = dot(g000, Pf0);
+      float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+      float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+      float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+      float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+      float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+      float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+      float n111 = dot(g111, Pf1);
+
+      vec3 fade_xyz = fade(Pf0);
+      vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+      vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+      float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);
+      return 2.2 * n_xyz;
+    }
+
+    uniform float u_time;
+    uniform float u_frequency;
+    uniform float u_red;
+    uniform float u_green;
+    uniform float u_blue;
+
+    void main() {
+      float noise = 3.0 * pnoise(position + u_time, vec3(10.0));
+      float displacement = (u_frequency / 30.0) * (noise / 10.0);
+      vec3 newPosition = position + normal * displacement;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+    }
+  </script>
+
+  <script id="fragmentshader" type="fragment">
+    uniform float u_red;
+    uniform float u_green;
+    uniform float u_blue;
+    
+    void main() {
+      gl_FragColor = vec4(vec3(u_red, u_green, u_blue), 1.0);
+    }
+  </script>
+  
+</body>
+</html>

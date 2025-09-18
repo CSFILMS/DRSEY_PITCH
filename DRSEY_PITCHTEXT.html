@@ -10,15 +10,15 @@
       position: fixed;
       top: calc(2vh + 5vw - 1rem);
       left: calc(50% + 1vw);
-      transform: translateX(-50%);
-      width: calc(57.5vw - 4rem);
-      height: calc(69vh - 4rem);
+      transform: translateX(-50%) perspective(1000px) rotateX(5deg) rotateY(-35deg);
+      width: calc(45vw - 4rem);
+      height: calc(55vh - 4rem);
       object-fit: cover;
       object-position: top center;
       z-index: -1;
       pointer-events: none;
       display: none;
-      filter: none;
+      filter: grayscale(1) brightness(0.64) contrast(1.2) sepia(1) hue-rotate(60deg) saturate(2);
     }
     /* Video overlay (disabled for small centered video) */
     .bg-overlay {
@@ -151,30 +151,42 @@ transparent 4px
       body {
 padding: 4vw;
 margin: 3vh auto;
-font-size: 1rem;
+font-size: 0.8rem;
       }
       #page {
 padding: 2vw;
       }
             #unscramble {
-        font-size: 1.0rem;
+        font-size: 0.8rem;
         line-height: 1.3;
       }
       #nav {
-font-size: 1.5rem;
+font-size: 0.9rem;
 margin: 2vh 0 1vh;
       }
       #nav-msg {
-font-size: 0.9rem;
+font-size: 0.6rem;
       }
       #hud {
-font-size: 0.8rem;
+font-size: 0.6rem;
 flex-direction: column;
 gap: 0.5rem;
       }
       #page-counter {
 bottom: 1vh;
 right: 2vw;
+      }
+      #prompt {
+        font-size: 0.7rem;
+      }
+      
+      /* Mobile video sizing */
+      .bg-video {
+        top: calc(1vh + 2vw);
+        left: calc(50% + 0.5vw);
+        width: calc(75vw - 2rem);
+        height: calc(40vh - 2rem);
+        transform: translateX(-50%) perspective(800px) rotateX(3deg) rotateY(-30deg);
       }
     }
     
@@ -328,7 +340,7 @@ z-index: 1;
       justify-content: center;
       align-items: center;
       margin: 3vh 0 1vh; 
-      font-size: 1.5rem;
+      font-size: 0.9rem;
       min-height: 5vh;
       position: relative;
       gap: 4vw;
@@ -337,7 +349,7 @@ z-index: 1;
           #nav-msg { 
       flex-grow:1; 
       text-align:center; 
-      font-size:0.9rem;
+      font-size:0.6rem;
       min-height: 1.5rem;
       visibility: hidden;
     }
@@ -483,6 +495,26 @@ z-index: 2 !important;
     <source src="VIDEOS/video15.webm" type="video/webm" />
   </video>
 
+  <video
+    id="bg-video2"
+    class="bg-video"
+    autoplay
+    muted
+    playsinline
+    loop
+    preload="metadata"
+    poster="./assets/bg-poster.jpg"
+    aria-hidden="true"
+    tabindex="-1"
+    disablepictureinpicture
+    controlslist="nodownload noplaybackrate noptimizequality nodatachannel"
+    volume="0"
+    defaultMuted
+    style="display: none;"
+  >
+    <source src="VIDEOS/video2.mp4" type="video/mp4" />
+  </video>
+
   <div class="bg-overlay" id="bg-overlay" style="display: none;"></div>
 
   <div id="page">
@@ -513,12 +545,13 @@ z-index: 2 !important;
     /* ================== CONTENT ================== */
     const fullTextRaw = `
 RECIPIENT: DORSEY 
-DISSEMINTATION: EYES ONLY
 
-NO FWD / NO DSTR
-
-ORIGINATOR: CSF
+EYES ONLY / NO FWD /
+NO DSTRO
+ 
+SOURCE: CSF
 FILE ID: 369-108-111
+
 
 
 
@@ -528,7 +561,6 @@ FILE ID: 369-108-111
 THE SIX BILLION DOLLAR MAN
 
 
-PRESS [F] FOR FULLSCREEN
 
 
 
@@ -776,7 +808,7 @@ Contact:
 
     /* ================== AUDIO SYSTEM ================== */
     let audioContext = null;
-    let audioEnabled = true;
+    let audioEnabled = false;
     let debugMode = true;
     let currentSoundVariation = 0; // 0-4 for 5 different variations
     let currentAudio = null; // Track currently playing audio
@@ -902,6 +934,43 @@ Contact:
     function hideVideoBackground() {
       console.log('🛑 Hiding video...');
       const video = document.getElementById('bg-video');
+      
+      if (video) {
+        video.pause();
+        video.style.display = 'none';
+      }
+    }
+
+    // Video2 background functions
+    function showVideo2Background() {
+      console.log('🎬 Showing video2...');
+      const video = document.getElementById('bg-video2');
+      
+      if (video) {
+        console.log('✅ Video2 element found, showing...');
+        video.style.display = 'block';
+        
+        // Ensure video is completely muted
+        video.muted = true;
+        video.volume = 0;
+        video.defaultMuted = true;
+        
+        // Reset video to beginning for sync
+        video.currentTime = 0;
+        
+        video.play().then(() => {
+          console.log('✅ Video2 playing from start (muted)');
+        }).catch(err => {
+          console.log('❌ Video2 play failed:', err.message);
+        });
+      } else {
+        console.error('❌ Video2 element not found!');
+      }
+    }
+
+    function hideVideo2Background() {
+      console.log('🛑 Hiding video2...');
+      const video = document.getElementById('bg-video2');
       
       if (video) {
         video.pause();
@@ -1971,8 +2040,9 @@ if ((index*chunkSize)>=len){
         pageEl.setAttribute('data-page', pageIndex + 1);
         
        
-      // Use simple, consistent font sizing
-        el.style.fontSize = '1.2rem';
+      // Use simple, consistent font sizing - smaller on mobile
+        const isMobile = window.innerWidth <= 768;
+        el.style.fontSize = isMobile ? '0.8rem' : '1.2rem';
         el.style.paddingBottom = ''; // Reset any padding
        
        // Show text for all pages
@@ -2012,103 +2082,29 @@ if ((index*chunkSize)>=len){
        
        showImage(pageIndex);
        
-       // Play audio for page 7 - simple autoplay with 3 second delay
+       // Audio disabled - no sounds
        if (pageIndex + 1 === 7) {
-         console.log('🎵 Playing audio for page 7 in 3 seconds...');
-         // Clear any existing timeout
-         if (audioTimeout) {
-           clearTimeout(audioTimeout);
-         }
-         audioTimeout = setTimeout(() => {
-           stopCurrentAudio(); // Stop any currently playing audio
-           const audio = new Audio('AUDIO/audio7.mp3');
-           audio.volume = 0.56; // 20% quieter (0.7 * 0.8)
-           currentAudio = audio; // Track the new audio
-           audio.play().then(() => {
-             console.log('✅ Audio playing successfully');
-           }).catch(err => {
-             console.log('❌ Audio play failed:', err.message);
-             console.log('💡 Try clicking anywhere on the page first, then navigate to page 7');
-           });
-         }, 3000);
+         console.log('🔇 Audio disabled for page 7');
        }
        
-       // Play audio for page 10 - simple autoplay (no delay)
+       // Audio disabled - no sounds
        if (pageIndex + 1 === 10) {
-         console.log('🎵 Playing audio for page 10...');
-         // Clear any existing timeout
-         if (audioTimeout) {
-           clearTimeout(audioTimeout);
-         }
-         stopCurrentAudio(); // Stop any currently playing audio
-         const audio = new Audio('AUDIO/audio10.mp3');
-         audio.volume = 0.875; // 25% louder (0.7 * 1.25)
-         currentAudio = audio; // Track the new audio
-         audio.play().then(() => {
-           console.log('✅ Audio playing successfully');
-         }).catch(err => {
-           console.log('❌ Audio play failed:', err.message);
-           console.log('💡 Try clicking anywhere on the page first, then navigate to page 10');
-         });
+         console.log('🔇 Audio disabled for page 10');
        }
        
-       // Play audio for page 9 - simple autoplay (no delay)
+       // Audio disabled - no sounds
        if (pageIndex + 1 === 9) {
-         console.log('🎵 Playing audio for page 9...');
-         // Clear any existing timeout
-         if (audioTimeout) {
-           clearTimeout(audioTimeout);
-         }
-         stopCurrentAudio(); // Stop any currently playing audio
-         const audio = new Audio('AUDIO/audio9.mp3');
-         audio.volume = 0.7;
-         currentAudio = audio; // Track the new audio
-         audio.play().then(() => {
-           console.log('✅ Audio playing successfully');
-         }).catch(err => {
-           console.log('❌ Audio play failed:', err.message);
-           console.log('💡 Try clicking anywhere on the page first, then navigate to page 9');
-         });
+         console.log('🔇 Audio disabled for page 9');
        }
        
-       // Play audio for page 13 - simple autoplay (no delay)
+       // Audio disabled - no sounds
        if (pageIndex + 1 === 13) {
-         console.log('🎵 Playing audio for page 13...');
-         // Clear any existing timeout
-         if (audioTimeout) {
-           clearTimeout(audioTimeout);
-         }
-         stopCurrentAudio(); // Stop any currently playing audio
-         const audio = new Audio('AUDIO/audio13.mp3');
-         audio.volume = 0.7;
-         currentAudio = audio; // Track the new audio
-         audio.play().then(() => {
-           console.log('✅ Audio playing successfully');
-         }).catch(err => {
-           console.log('❌ Audio play failed:', err.message);
-           console.log('💡 Try clicking anywhere on the page first, then navigate to page 13');
-         });
+         console.log('🔇 Audio disabled for page 13');
        }
        
-      // Play audio for page 15 - simple autoplay
+      // Audio disabled - no sounds
       if (pageIndex + 1 === 15) {
-        console.log('🎵 Playing audio for page 15...');
-        // Clear any existing timeout
-        if (audioTimeout) {
-          clearTimeout(audioTimeout);
-        }
-        stopCurrentAudio(); // Stop any currently playing audio
-        
-        const audio = new Audio('AUDIO/audio15.mp3');
-        audio.volume = 0.7;
-        currentAudio = audio; // Track the new audio
-        
-        audio.play().then(() => {
-          console.log('✅ Audio playing successfully');
-        }).catch(err => {
-          console.log('❌ Audio play failed:', err.message);
-          console.log('💡 Try clicking anywhere on the page first, then navigate to page 15');
-        });
+        console.log('🔇 Audio disabled for page 15');
       }
        
        // Show video on slide 15
@@ -2116,10 +2112,23 @@ if ((index*chunkSize)>=len){
        if (pageIndex + 1 === 15) {
          console.log('🎬 SLIDE 15 - Showing video...');
          showVideoBackground();
+         // Hide video2 when showing video15
+         hideVideo2Background();
        } else {
          console.log(`🎬 Not slide 15 (current: ${pageIndex + 1}), hiding video...`);
          // Hide video on other pages
          hideVideoBackground();
+       }
+       
+       // Show video2 on slide 2
+       console.log(`🔍 Debug: Current page ${pageIndex + 1}, checking for video2 on slide 2...`);
+       if (pageIndex + 1 === 2) {
+         console.log('🎬 SLIDE 2 - Showing video2...');
+         showVideo2Background();
+       } else {
+         console.log(`🎬 Not slide 2 (current: ${pageIndex + 1}), hiding video2...`);
+         // Hide video2 on other pages
+         hideVideo2Background();
        }
      }
 
@@ -2231,8 +2240,11 @@ if ((index*chunkSize)>=len){
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.code==='Space'||e.code==='ArrowRight'){ e.preventDefault(); startPage(currentPage+1); }
-      else if (e.code==='ArrowLeft'){ e.preventDefault(); startPage(currentPage-1); }
+      // Mute any keyboard sounds
+      e.preventDefault();
+      
+      if (e.code==='Space'||e.code==='ArrowRight'){ startPage(currentPage+1); }
+      else if (e.code==='ArrowLeft'){ startPage(currentPage-1); }
 
       const k = e.key;
      if (k==='ArrowUp'){ 
@@ -2289,6 +2301,14 @@ resetTextContainer();
         console.log('🧪 H key pressed - hiding video...');
         hideVideoBackground();
       }
+      else if (k==='2'||k==='2'){ 
+        console.log('🧪 2 key pressed - testing video2...');
+        showVideo2Background();
+      }
+      else if (k==='j'||k==='J'){ 
+        console.log('🧪 J key pressed - hiding video2...');
+        hideVideo2Background();
+      }
     });
     
     // Fullscreen functionality
@@ -2330,6 +2350,17 @@ if (e.key==='1'||e.key==='2'||e.key==='3'){ colorIndex=parseInt(e.key,10)-1; app
 
     /* ================== INIT ================== */
     window.onload = () => {
+      // Mute all audio by default
+      document.addEventListener('keydown', (e) => {
+        e.preventDefault();
+      });
+      
+      // Mute all audio elements by default
+      document.querySelectorAll('audio, video').forEach(media => {
+        media.muted = true;
+        media.volume = 0;
+      });
+      
       // Video will only show on page 15 via the page navigation logic
       // Hide any images that fail to load
       document.querySelectorAll('#page img').forEach(img => {
