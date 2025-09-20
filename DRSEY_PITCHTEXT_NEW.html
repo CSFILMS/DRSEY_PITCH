@@ -1868,30 +1868,32 @@ height: 100%;
        testImg.src = testSrc;
      }
 
-    /* ================== SIMPLE TEXT SIZING ================== */
-      function truncateTextToFit(element, text) {
-element.textContent = text;
-
-      // Simple approach: just ensure text fits without complex calculations
-const textWrap = document.getElementById('text-wrap');
-const availableHeight = textWrap ? textWrap.clientHeight : element.clientHeight;
-
-      // Only adjust if text overflows
-if (element.scrollHeight > availableHeight) {
-  let fontSize = parseFloat(getComputedStyle(element).fontSize);
-  
-        // Reduce font size gradually until it fits
-        while (element.scrollHeight > availableHeight && fontSize > 1.0) {
-          fontSize -= 0.1;
-    element.style.fontSize = fontSize + 'rem';
-  }
-  
-        // If still doesn't fit, add padding
-  if (element.scrollHeight > availableHeight) {
-    element.style.paddingBottom = '2rem';
-  }
-        }
+    /* ================== TEXT SIZING ================== */
+    function truncateTextToFit(element, text) {
+      element.textContent = text;
+      
+      // Get available height
+      const textWrap = document.getElementById('text-wrap');
+      const availableHeight = textWrap ? textWrap.clientHeight : window.innerHeight * 0.8;
+      
+      // Start with a reasonable font size
+      let fontSize = 1.2; // Start with 1.2rem
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) fontSize = 0.9; // Smaller on mobile
+      
+      element.style.fontSize = fontSize + 'rem';
+      
+      // Reduce font size if text overflows
+      while (element.scrollHeight > availableHeight && fontSize > 0.5) {
+        fontSize -= 0.05;
+        element.style.fontSize = fontSize + 'rem';
       }
+      
+      // If still doesn't fit, add some padding
+      if (element.scrollHeight > availableHeight) {
+        element.style.paddingBottom = '1rem';
+      }
+    }
 
     /* ================== SCRAMBLE ================== */
     // Audio function for text decoding
@@ -1976,10 +1978,9 @@ if ((index*chunkSize)>=len){
         pageEl.setAttribute('data-page', pageIndex + 1);
         
        
-      // Use simple, consistent font sizing - smaller on mobile
-        const isMobile = window.innerWidth <= 768;
-        el.style.fontSize = isMobile ? '0.8rem' : '1.2rem';
-        el.style.paddingBottom = ''; // Reset any padding
+      // Reset font sizing - let truncateTextToFit handle it
+        el.style.fontSize = '';
+        el.style.paddingBottom = '';
        
        // Show text for all pages
        if (pageIndex < pages.length) {
